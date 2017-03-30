@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from random import randint
 from random import choice as randchoice
+from random import sample
 from .utils.dataIO import dataIO
 from .utils import checks
 import datetime
@@ -207,6 +208,9 @@ class TriviaSession():
                 await trivia_manager.bot.say("Guys...? Well, I guess I'll stop then.")
                 await self.stop_trivia()
                 return True
+            if self.status == "waiting for answer" and abs(self.timer - int(time.perf_counter())) >= self.settings["TRIVIA_DELAY"] / 2:
+                await trivia_manager.bot.say("Hint: {}".format(self.generate_hint()))
+                self.status = "hint given"
             await asyncio.sleep(1) #Waiting for an answer or for the time limit
         if self.status == "correct answer":
             self.status = "new question"
@@ -230,6 +234,17 @@ class TriviaSession():
             await asyncio.sleep(3)
             if not self.status == "stop":
                 await self.new_question()
+
+    def generate_hint(self):
+        answer = self.current_q["ANSWERS"][0]
+        nbr_hint_chars = int(len(answer) / 3)
+        char_numbers = sample(range(0, len(answer) - 1), nbr_hint_chars)
+        hint = []
+        for char in answer:
+            hint.append("\*" if char != " " else " ")
+        for char_number in char_numbers:
+            hint[char_number] = answer[char_number]
+        return "".join(hint)
 
     async def send_table(self):
         self.score_list = sorted(self.score_list.items(), reverse=True, key=lambda x: x[1]) # orders score from lower to higher
