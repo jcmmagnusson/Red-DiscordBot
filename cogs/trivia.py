@@ -112,7 +112,8 @@ class Trivia:
 
 class TriviaSession():
     def __init__(self, message, settings):
-        self.gave_answer = ["I know this one! {}!", "Easy: {}.", "Oh really? It's {} of course."]
+        # self.gave_answer = ["I know this one! {}!", "Easy: {}.", "Oh really? It's {} of course."]
+        self.gave_answer = ["Correct answer: {}"]
         self.current_q = None # {"QUESTION" : "String", "ANSWERS" : []}
         self.question_list = ""
         self.channel = message.channel
