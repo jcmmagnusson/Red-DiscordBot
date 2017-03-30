@@ -6,3 +6,10 @@ data
 !data/audio/playlists/*
 *.exe
 *.dll
+
+# IntelliJ
+.idea
+*.iml
+*.ipr
+*.iws
+out
