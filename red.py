@@ -9,7 +9,6 @@ import datetime
 import subprocess
 
 try:
-    assert sys.version_info >= (3, 5)
     from discord.ext import commands
     import discord
 except ImportError:
@@ -17,13 +16,7 @@ except ImportError:
           "Consult the guide for your operating system "
           "and do ALL the steps in order.\n"
           "https://twentysix26.github.io/Red-Docs/\n")
-    sys.exit()
-except AssertionError:
-    print("Red needs Python 3.5 or superior.\n"
-          "Consult the guide for your operating system "
-          "and do ALL the steps in order.\n"
-          "https://twentysix26.github.io/Red-Docs/\n")
-    sys.exit()
+    sys.exit(1)
 
 from cogs.utils.settings import Settings
 from cogs.utils.dataIO import dataIO
@@ -69,6 +62,7 @@ class Bot(commands.Bot):
         self._shutdown_mode = None
         self.logger = set_logger(self)
         self._last_exception = None
+        self.oauth_url = ""
         if 'self_bot' in kwargs:
             self.settings.self_bot = kwargs['self_bot']
         else:
@@ -155,38 +149,39 @@ class Bot(commands.Bot):
         if author == self.user:
             return self.settings.self_bot
 
-        mod = self.get_cog('Mod')
+        mod_cog = self.get_cog('Mod')
+        global_ignores = self.get_cog('Owner').global_ignores
 
-        if mod is not None:
-            if self.settings.owner == author.id:
-                return True
-            if not message.channel.is_private:
-                server = message.server
-                names = (self.settings.get_server_admin(
-                    server), self.settings.get_server_mod(server))
-                results = map(
-                    lambda name: discord.utils.get(author.roles, name=name),
-                    names)
-                for r in results:
-                    if r is not None:
-                        return True
+        if self.settings.owner == author.id:
+            return True
 
-            if author.id in mod.blacklist_list:
+        if author.id in global_ignores["blacklist"]:
+            return False
+
+        if global_ignores["whitelist"]:
+            if author.id not in global_ignores["whitelist"]:
                 return False
 
-            if mod.whitelist_list:
-                if author.id not in mod.whitelist_list:
-                    return False
+        if not message.channel.is_private:
+            server = message.server
+            names = (self.settings.get_server_admin(
+                server), self.settings.get_server_mod(server))
+            results = map(
+                lambda name: discord.utils.get(author.roles, name=name),
+                names)
+            for r in results:
+                if r is not None:
+                    return True
 
+        if mod_cog is not None:
             if not message.channel.is_private:
-                if message.server.id in mod.ignore_list["SERVERS"]:
+                if message.server.id in mod_cog.ignore_list["SERVERS"]:
                     return False
 
-                if message.channel.id in mod.ignore_list["CHANNELS"]:
+                if message.channel.id in mod_cog.ignore_list["CHANNELS"]:
                     return False
-            return True
-        else:
-            return True
+
+        return True
 
     async def pip_install(self, name, *, timeout=None):
         """
@@ -360,6 +355,16 @@ def initialize(bot_class=Bot, formatter_class=Formatter):
         elif isinstance(error, commands.DisabledCommand):
             await bot.send_message(channel, "That command is disabled.")
         elif isinstance(error, commands.CommandInvokeError):
+            # A bit hacky, couldn't find a better way
+            no_dms = "Cannot send messages to this user"
+            is_help_cmd = ctx.command.qualified_name == "help"
+            is_forbidden = isinstance(error.original, discord.Forbidden)
+            if is_help_cmd and is_forbidden and error.original.text == no_dms:
+                msg = ("I couldn't send the help message to you in DM. Either"
+                       " you blocked me or you disabled DMs in this server.")
+                await bot.send_message(channel, msg)
+                return
+
             bot.logger.exception("Exception in command '{}'".format(
                 ctx.command.qualified_name), exc_info=error.original)
             message = ("Error in command '{}'. Check your console or "
@@ -621,6 +626,7 @@ if __name__ == '__main__':
                 bot.settings.email = None
                 bot.settings.password = None
                 bot.settings.save_settings()
+                print("Login credentials have been reset.")
     except KeyboardInterrupt:
         loop.run_until_complete(bot.logout())
     except Exception as e:

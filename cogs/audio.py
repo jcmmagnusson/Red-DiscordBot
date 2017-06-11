@@ -45,7 +45,6 @@ youtube_dl_options = {
     'extractaudio': True,
     'audioformat': "mp3",
     'outtmpl': '%(id)s',
-    'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': True,
     'quiet': True,
@@ -720,7 +719,7 @@ class Audio:
             return False
         yt_playlist = re.compile(
             r'^(https?\:\/\/)?(www\.)?(youtube\.com|youtu\.?be)'
-            r'(\/playlist\?).*(list=)(.*)(&|$)')
+            r'((\/playlist\?)|\/watch\?).*(list=)(.*)(&|$)')
         # Group 6 should be the list ID
         if yt_playlist.match(url):
             return True
@@ -2159,6 +2158,10 @@ class Audio:
                      not vc.audio_player.is_done()):
                 log.debug("just got unmuted, resuming")
                 vc.audio_player.resume()
+
+    def __unload(self):
+        for vc in self.bot.voice_clients:
+            self.bot.loop.create_task(vc.disconnect())
 
 
 def check_folders():
