@@ -211,7 +211,7 @@ class TriviaSession():
                 return True
             if self.status == "waiting for answer" and abs(self.timer - int(time.perf_counter())) >= self.settings["TRIVIA_DELAY"] / 2:
                 await trivia_manager.bot.say("Hint: {}".format(self.generate_hint()))
-                self.status = "hint given"
+                self.status = "hint given"  # <------------------ BUGGAT, KAN OVERWRITA STATUS CORRECT ANSWER
             await asyncio.sleep(1) #Waiting for an answer or for the time limit
         if self.status == "correct answer":
             self.status = "new question"
