@@ -282,7 +282,7 @@ class TriviaSession():
                 await self.new_question()
 
     def generate_hint(self):
-        answer = self.current_line["ANSWERS"][0]
+        answer = self.current_line.answers[0]
         nbr_hint_chars = int(len(answer) / 3)
         char_numbers = sample(range(0, len(answer) - 1), nbr_hint_chars)
         hint = []
